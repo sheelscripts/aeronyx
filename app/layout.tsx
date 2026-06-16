@@ -20,8 +20,14 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Aeronyx — Premium Atmospheric Intelligence",
+  title: "Aeronyx | AQI",
   description: "Next-gen air quality telemetry, edge ML modeling, and automated dispatch. Built for modern cities.",
+  icons: [
+    {
+      url: '/favicon.ico',
+      type: 'image/x-icon',
+    },
+  ],
 };
 
 export default function RootLayout({

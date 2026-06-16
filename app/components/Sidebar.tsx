@@ -50,20 +50,21 @@ export default function Sidebar() {
       {/* Mobile Header */}
       <div className="mobile-header">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
+          <img
+            src="/aeronyx.png"
+            alt="Aeronyx Logo"
+            width={32}
+            height={32}
             style={{
-              width: 32,
-              height: 32,
               borderRadius: "50%",
               border: "1px solid rgba(0,30,43,0.1)",
+              background: "#ffffff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#ffffff",
+              objectFit: "cover",
             }}
-          >
-            <Wind size={15} color="var(--brand-teal-deep)" />
-          </div>
+          />
           <span
             style={{
               fontFamily: "var(--font-display)",
@@ -87,10 +88,12 @@ export default function Sidebar() {
         <div className="sidebar-logo" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* Custom Luxury Logo Emblem */}
-            <div
+            <img
+              src="/aeronyx.png"
+              alt="Aeronyx Logo"
+              width={38}
+              height={38}
               style={{
-                width: 38,
-                height: 38,
                 borderRadius: "50%",
                 background: "rgba(255, 255, 255, 0.03)",
                 border: "1px solid rgba(255, 255, 255, 0.08)",
@@ -98,19 +101,9 @@ export default function Sidebar() {
                 alignItems: "center",
                 justifyContent: "center",
                 position: "relative",
+                objectFit: "cover",
               }}
-            >
-              <Wind size={18} color="var(--primary)" />
-              <div
-                style={{
-                  position: "absolute",
-                  inset: -2,
-                  borderRadius: "50%",
-                  border: "1px solid rgba(0,237,100,0.12)",
-                  pointerEvents: "none",
-                }}
-              />
-            </div>
+            />
             <div className="sidebar-logo-text">
               <h1 style={{ color: "#ffffff", fontSize: "1.25rem", letterSpacing: "-0.02em", fontWeight: 700 }}>Aeronyx</h1>
               <span style={{ color: "var(--on-dark-muted)", fontSize: "0.62rem", letterSpacing: "0.08em", fontWeight: 700 }}>Atmos Intel</span>

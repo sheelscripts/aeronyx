@@ -2,6 +2,8 @@
 
 IoT-Enabled Real-Time Air Quality Intelligence Platform Ward-Level Monitoring | ML Source Detection | Wind-Aware Attribution | Smart Alerts | Policy Recommendations
 
+Team MechaMinds
+
 ## Overview
 
 Aeronyx is a full-stack air quality monitoring platform covering all 250 municipal wards across 12 MCD zones of Delhi. It combines IoT sensor hardware (ESP32), cloud data processing (Next.js API routes), ML models, wind-aware atmospheric context, and an interactive React dashboard to provide real-time pollution intelligence.
@@ -11,14 +13,6 @@ Aeronyx is a full-stack air quality monitoring platform covering all 250 municip
 ### Story
 
 Imagine a city where every breath is monitored, every pollutant traced to its source, and every citizen empowered with actionable insights. Aeronyx turns this vision into reality by deploying a network of low‑cost IoT nodes across Delhi’s wards, streaming data to a serverless Next.js backend that runs machine‑learning models in real time. The platform not only shows live AQI numbers but also tells you *why* the air is polluted—whether it’s traffic, construction, or biomass burning—and forecasts how it will change over the next three days. With wind‑aware attribution, city officials can see exactly where pollution is coming from and target interventions where they matter most. Residents receive personalized health alerts, while planners get policy recommendations backed by data. In short, Aeronyx doesn’t just measure air quality—it helps improve it.
-
-## Screenshots
-
-![Dashboard](./screenshots/1.png)
-![Ward Map](./screenshots/2.png)
-![Analytic](./screenshots/3.png)
-![ML Insights](./screenshots/5.png)
-![Plume Map](./screenshots/6.png)
 
 ## System Architecture
 
@@ -78,7 +72,6 @@ Next.js Frontend (React)
 
 ## Project Structure
 
-```text
 Aeronyx/
   app/
     admin/                 # Admin page
@@ -136,7 +129,7 @@ Aeronyx/
   postcss.config.mjs       # PostCSS configuration
   skills-lock.json         # Locked skills
   tsconfig.json            # TypeScript configuration
-```
+
 ## Hardware - IoT Sensor Node
 
 | Component | Model | Measurement |
@@ -239,6 +232,12 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
    - `THINGSPEAK_READ_API_KEY`
    - `OWM_API_KEY` (optional)
 4. Vercel will automatically build and deploy the application.
+
+## Screenshots
+
+![Dashboard](https://via.placeholder.com/1200x630.png?text=Dashboard+Screenshot)
+![Ward Map](https://via.placeholder.com/1200x630.png?text=Ward+Map+Screenshot)
+![ML Insights](https://via.placeholder.com/1200x630.png?text=ML+Insights+Screenshot)
 
 ---
 

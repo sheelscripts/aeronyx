@@ -139,6 +139,10 @@ Aeronyx/
 ```
 ## Hardware - IoT Sensor Node
 
+![Hardware PCB](./screenshots/9.jpeg)
+![ThinkSpeaks](./screenshots/10.png)
+
+
 | Component | Model | Measurement |
 |-----------|-------|-------------|
 | Microcontroller | ESP32-WROOM-32 | WiFi/BLE, Dual-core 240MHz |

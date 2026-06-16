@@ -367,7 +367,7 @@ export default function PlumeMapClient() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="plume-map-container"
-          style={{ border: "1px solid rgba(0,30,43,0.08)", borderRadius: "var(--radius-lg)", overflow: "hidden", position: "relative" }}
+          style={{ border: "1px solid rgba(0,30,43,0.08)", borderRadius: "var(--radius-lg)", overflow: "hidden", position: "relative", zIndex: 1 }}
         >
           <MapContainer center={[28.6139, 77.209]} zoom={12} style={{ width: "100%", height: "100%" }}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap" opacity={0.65} />
@@ -506,7 +506,7 @@ export default function PlumeMapClient() {
         </motion.div>
 
         {/* ── Data panel ─────────────────────────────── */}
-        <div className="plume-sidebar">
+        <div className="plume-sidebar" style={{ position: "relative", zIndex: 2 }}>
           {/* Spike card */}
           <motion.div
             className="glass-card"

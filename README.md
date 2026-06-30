@@ -213,6 +213,22 @@ All API endpoints are under `/api` in the Next.js app.
 | GET | `/api/health` | Backend health check |
 | WS | `/ws/live` | Real-time WebSocket feed |
 
+## AQI Calculation Standards
+
+Aeronyx unifies its air quality reporting under the **Indian CPCB (Central Pollution Control Board) standard** to maintain local regulatory consistency for Delhi municipal wards. 
+
+While global web platforms (like WAQI API) and commercial apps (like `aqi.in`, Dyson Link, or Apple Weather) default to the **US EPA (Environmental Protection Agency) standard** by default, Aeronyx calculates CPCB AQI dynamically from raw sensor PM2.5, CO, and NO2 concentrations.
+
+### Calculation Formula
+Both standards use the same piecewise linear interpolation formula:
+$$\text{AQI} = \frac{I_{\text{high}} - I_{\text{low}}}{C_{\text{high}} - C_{\text{low}}} \times (C - C_{\text{low}}) + I_{\text{low}}$$
+
+### Key PM2.5 Breakpoint Differences
+- **Indian CPCB**: Good category covers up to `30 µg/m³` and Satisfactory up to `60 µg/m³`. An instantaneous PM2.5 of **`87 µg/m³`** translates to **`190 AQI`** (CPCB Moderate).
+- **US EPA**: Stricter at lower concentrations. Good category caps at `12 µg/m³` and Moderate at `35.4 µg/m³`. An instantaneous PM2.5 of **`87 µg/m³`** translates to **`167 AQI`** (US EPA Unhealthy).
+
+All telemetry gauges, sidebar indicators, and ward heatmaps in Aeronyx are fully synchronized using the Indian CPCB standard.
+
 ## Quick Start
 
 1. Clone the repository

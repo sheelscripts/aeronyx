@@ -9,13 +9,15 @@ const api = axios.create({
 });
 
 // --- Core API Functions ---
-export const fetchLiveData = () => api.get("/api/live").then((r) => r.data);
+export const fetchLiveData = (source?: string, waqiToken?: string, thingspeakChannel?: string, thingspeakKey?: string) =>
+  api.get("/api/live", { params: { source, waqi_token: waqiToken, thingspeak_channel: thingspeakChannel, thingspeak_key: thingspeakKey } }).then((r) => r.data);
 export const fetchHistory = (hours = 24) => api.get(`/api/history?hours=${hours}`).then((r) => r.data);
 export const fetchAdvisory = () => api.get("/api/advisory").then((r) => r.data);
 export const fetchPolicy = (source: string, aqi: number) =>
   api.get("/api/policy", { params: { source, aqi } }).then((r) => r.data);
 export const fetchHealth = () => api.get("/api/health").then((r) => r.data);
-export const fetchWards = () => api.get("/api/wards").then((r) => r.data);
+export const fetchWards = (source?: string, waqiToken?: string, thingspeakChannel?: string, thingspeakKey?: string) =>
+  api.get("/api/wards", { params: { source, waqi_token: waqiToken, thingspeak_channel: thingspeakChannel, thingspeak_key: thingspeakKey } }).then((r) => r.data);
 export const fetchWard = (wardId: string) => api.get(`/api/wards/${wardId}`).then((r) => r.data);
 
 // --- Wind + Plume + Attribution APIs ---
@@ -59,9 +61,8 @@ export const fetchIndustrialSource = (wardId = "ward_1", transportHours = 1, top
     params: { transport_hours: transportHours, top_sources: topSources },
   }).then((r) => r.data);
 
-// --- Direct ThingSpeak fallback (if backend routing isn't waking up) ---
-const THINGSPEAK_CHANNEL = "3316545";
-const THINGSPEAK_API_KEY = "GFGLEQFXSC40CFOO";
+const THINGSPEAK_CHANNEL = "3418865";
+const THINGSPEAK_API_KEY = "HZMI1LP3UUHK2S7O";
 const THINGSPEAK_BASE = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL}`;
 
 function safeFloat(val: any) {
@@ -134,8 +135,11 @@ function parseThingSpeakFeed(feed: any) {
   };
 }
 
-export async function fetchThingSpeakLive() {
-  const resp = await axios.get(`${THINGSPEAK_BASE}/feeds/last.json`, { params: { api_key: THINGSPEAK_API_KEY } });
+export async function fetchThingSpeakLive(channelId?: string, readKey?: string) {
+  const activeChannel = channelId || THINGSPEAK_CHANNEL;
+  const activeKey = readKey || THINGSPEAK_API_KEY;
+  const base = `https://api.thingspeak.com/channels/${activeChannel}`;
+  const resp = await axios.get(`${base}/feeds/last.json`, { params: { api_key: activeKey } });
   return parseThingSpeakFeed(resp.data);
 }
 
@@ -145,19 +149,72 @@ export async function fetchThingSpeakHistory(results = 100) {
   return feeds.filter((f: any) => f.created_at).map(parseThingSpeakFeed);
 }
 
-export async function getLiveData() {
+function calculateCpcbAqiLocal(pm25: number, co: number, no2: number) {
+  const linear = (val: number, bp: number[][]) => {
+    for (const b of bp) {
+      if (val >= b[0] && val <= b[1]) {
+        return Math.round(((b[3] - b[2]) / (b[1] - b[0])) * (val - b[0]) + b[2]);
+      }
+    }
+    return 0;
+  };
+  const pmAqi = linear(pm25, [[0, 30, 0, 50], [31, 60, 51, 100], [61, 90, 101, 200], [91, 120, 201, 300], [121, 250, 301, 400], [251, 500, 401, 500]]);
+  const coAqi = linear(co * 1.131, [[0, 1.0, 0, 50], [1.1, 2.0, 51, 100], [2.1, 10.0, 101, 200], [10.1, 17.0, 201, 300], [17.1, 34.0, 301, 400], [34.1, 500.0, 401, 500]]);
+  const no2Aqi = linear(no2 * 1000.0, [[0, 40, 0, 50], [41, 80, 51, 100], [81, 180, 101, 200], [181, 280, 201, 300], [281, 400, 301, 400], [401, 500, 401, 500]]);
+  return Math.max(pmAqi, coAqi, no2Aqi);
+}
+
+export async function getLiveData(source?: string, waqiToken?: string, thingspeakChannel?: string, thingspeakKey?: string) {
   try {
-    const data = await fetchLiveData();
+    const data = await fetchLiveData(source, waqiToken, thingspeakChannel, thingspeakKey);
     if (data && data.status !== "offline") return { ...data, _source: "backend" };
   } catch {
     // Ignore error
   }
   try {
-    const ts = await fetchThingSpeakLive();
-    return { ...ts, _source: "thingspeak" };
+    if (source === "hardware") {
+      const ts = await fetchThingSpeakLive(thingspeakChannel, thingspeakKey);
+      return { ...ts, _source: "thingspeak" };
+    } else {
+      const activeToken = waqiToken || "demo";
+      const resp = await axios.get(`https://api.waqi.info/feed/geo:28.635;77.228/?token=${activeToken}`);
+      if (resp.status === 200 && resp.data.status === "ok") {
+        const data = resp.data.data;
+        const iaqi = data.iaqi || {};
+        const temperature = iaqi.t ? parseFloat(iaqi.t.v) : 28.0;
+        const humidity = iaqi.h ? parseFloat(iaqi.h.v) : 55.0;
+        const pm25 = iaqi.pm25 ? parseFloat(iaqi.pm25.v) : 60.0;
+        const coRaw = iaqi.co ? parseFloat(iaqi.co.v) : 1.2;
+        const co = coRaw > 10 ? coRaw / 10.0 : coRaw;
+        const no2Raw = iaqi.no2 ? parseFloat(iaqi.no2.v) : 35.0;
+        const no2 = no2Raw > 1 ? no2Raw / 1000.0 : no2Raw;
+        const tvoc = iaqi.tvoc ? parseFloat(iaqi.tvoc.v) : Math.max(0.05, Math.min(2.0, pm25 * 0.004 + (Math.random() * 0.1 - 0.05)));
+        
+        // Calculate CPCB AQI locally
+        const aqi = Math.max(0, Math.min(450, calculateCpcbAqiLocal(pm25, co, no2)));
+        const cat = getAqiCategoryColor(aqi);
+        const src = detectSourceLocal(pm25, co, no2, tvoc);
+        return {
+          timestamp: new Date(data.time.s || new Date()).toISOString(),
+          temperature: Math.round(temperature * 10) / 10,
+          humidity: Math.round(humidity * 10) / 10,
+          pm25: Math.round(pm25 * 10) / 10,
+          tvoc: Math.round(tvoc * 100) / 100,
+          no2: Math.round(no2 * 1000) / 1000,
+          co: Math.round(co * 100) / 100,
+          aqi,
+          aqi_category: cat.category,
+          aqi_color: cat.color,
+          source_detected: src.source,
+          status: "online",
+          _source: "waqi-api"
+        };
+      }
+    }
   } catch {
     return null;
   }
+  return null;
 }
 
 export async function getHistoryData(results = 200) {

@@ -146,7 +146,14 @@ function WardDetailPanel({ ward, attribution, onClose }: WardDetailPanelProps) {
           <div key={label} className="ward-metric-item">
             <Icon size={14} style={{ color }} />
             <div>
-              <div className="ward-metric-val">{typeof value === "number" ? value.toFixed(1) : "—"}</div>
+              <div className="ward-metric-val">
+                {typeof value === "number" ? (
+                  label === "NO₂" ? value.toFixed(3) :
+                  label === "CO" || label === "TVOC" ? value.toFixed(2) :
+                  label === "Humidity" ? Math.round(value).toString() :
+                  value.toFixed(1)
+                ) : "—"}
+              </div>
               <div className="ward-metric-label">
                 {label} <span>{unit}</span>
               </div>
@@ -184,6 +191,11 @@ function WardListItem({ ward, isSelected, onClick }: WardListItemProps) {
 }
 
 export default function MapPage() {
+  const [source, setSource] = useState<string>("real_api");
+  const [waqiToken, setWaqiToken] = useState<string>("2762cbe0240a9a00d82cc8e635b8fb10c02cee70");
+  const [thingspeakChannel, setThingspeakChannel] = useState<string>("3418865");
+  const [thingspeakKey, setThingspeakKey] = useState<string>("HZMI1LP3UUHK2S7O");
+
   const [wards, setWards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWard, setSelectedWard] = useState<string | null>(null);
@@ -197,7 +209,10 @@ export default function MapPage() {
 
   const loadWards = useCallback(async () => {
     try {
-      const [res, wf] = await Promise.all([fetchWards(), fetchWindField(11)]);
+      const [res, wf] = await Promise.all([
+        fetchWards(source, waqiToken, thingspeakChannel, thingspeakKey),
+        fetchWindField(11),
+      ]);
       setWards(res.wards || []);
       setWindField(wf.field || []);
     } catch {
@@ -206,13 +221,30 @@ export default function MapPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [source, waqiToken, thingspeakChannel, thingspeakKey]);
 
   useEffect(() => {
     loadWards();
     const interval = setInterval(loadWards, 30000);
     return () => clearInterval(interval);
   }, [loadWards]);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setSource(localStorage.getItem("aeronyx_data_source") || "real_api");
+      setWaqiToken(localStorage.getItem("aeronyx_waqi_token") || "2762cbe0240a9a00d82cc8e635b8fb10c02cee70");
+      setThingspeakChannel(localStorage.getItem("aeronyx_thingspeak_channel") || "3418865");
+      setThingspeakKey(localStorage.getItem("aeronyx_thingspeak_key") || "HZMI1LP3UUHK2S7O");
+    };
+
+    handleStorageChange(); // Load immediately on client mount
+    window.addEventListener("storage", handleStorageChange);
+    const interval = setInterval(handleStorageChange, 2000);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Split data into zones and wards
   const zoneData = useMemo(() => wards.filter((w) => w.feature_type === "zone"), [wards]);
@@ -271,7 +303,24 @@ export default function MapPage() {
             <h2 style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.03em" }}>Ward-Wise AQI Heatmap</h2>
             <p style={{ color: "var(--earth-500)", fontSize: "0.9rem", marginTop: 4 }}>Interactive atmospheric heatmap — {wardOnlyData.length} wards across {zoneData.length} municipal zones</p>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            {/* Active Source Status Badge */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "rgba(0,30,43,0.02)",
+              border: "1px solid var(--hairline-soft)",
+              padding: "6px 12px",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              color: "var(--earth-600)"
+            }}>
+              <span className="dot" style={{ background: source === "hardware" ? "var(--primary-deep)" : "#10b981", width: 6, height: 6, borderRadius: "50%", display: "inline-block" }} />
+              <span>Source: {source === "hardware" ? "IoT Hardware" : "Real API"}</span>
+            </div>
+
             {/* View mode toggle */}
             <div className="map-view-toggle">
               <button

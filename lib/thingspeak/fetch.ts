@@ -4,8 +4,8 @@ import { calculateAqi, getAqiCategory } from "../ml/aqiCalc";
 import { detectSource } from "../ml/mlPredictor";
 import { interpolateWind } from "../weather/windService";
 
-const CHANNEL_ID = process.env.THINGSPEAK_CHANNEL_ID || "3316545";
-const READ_API_KEY = process.env.THINGSPEAK_READ_API_KEY || "GFGLEQFXSC40CFOO";
+const CHANNEL_ID = process.env.THINGSPEAK_CHANNEL_ID || "3418865";
+const READ_API_KEY = process.env.THINGSPEAK_READ_API_KEY || "HZMI1LP3UUHK2S7O";
 const BASE_URL = `https://api.thingspeak.com/channels/${CHANNEL_ID}`;
 
 // Toggle for demo mode
@@ -82,13 +82,16 @@ function isAllZeros(feed: any): boolean {
   return true;
 }
 
-export async function fetchLatestFromThingSpeak(): Promise<SensorReading | null> {
+export async function fetchLatestFromThingSpeak(channelId?: string, readKey?: string): Promise<SensorReading | null> {
   let useDemo = DEMO_MODE === "true";
+  const activeChannel = channelId || CHANNEL_ID;
+  const activeKey = readKey || READ_API_KEY;
+  const url = `https://api.thingspeak.com/channels/${activeChannel}`;
 
   if (DEMO_MODE !== "true") {
     try {
-      const response = await axios.get(`${BASE_URL}/feeds/last.json`, {
-        params: { api_key: READ_API_KEY },
+      const response = await axios.get(`${url}/feeds/last.json`, {
+        params: { api_key: activeKey },
         timeout: 8000,
       });
 

@@ -17,16 +17,28 @@ export interface LiveDataResult {
   status?: string;
 }
 
-export function useLiveData() {
-  const [data, setData] = useState<LiveDataResult | null>(() => {
-    if (typeof window === "undefined") return null;
+export function useLiveData(
+  customSource?: string,
+  customWaqiToken?: string,
+  customThingspeakChannel?: string,
+  customThingspeakKey?: string
+) {
+  const [source, setSource] = useState("real_api");
+  const [waqiToken, setWaqiToken] = useState("2762cbe0240a9a00d82cc8e635b8fb10c02cee70");
+  const [thingspeakChannel, setThingspeakChannel] = useState("3418865");
+  const [thingspeakKey, setThingspeakKey] = useState("HZMI1LP3UUHK2S7O");
+
+  const [data, setData] = useState<LiveDataResult | null>(null);
+
+  // Load initial cached reading from sessionStorage after mounting to prevent SSR hydration mismatches
+  useEffect(() => {
     try {
       const cached = sessionStorage.getItem("aeronyx_last_reading");
-      return cached ? JSON.parse(cached) : null;
-    } catch {
-      return null;
-    }
-  });
+      if (cached) {
+        setData(JSON.parse(cached));
+      }
+    } catch {}
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,15 +47,47 @@ export function useLiveData() {
   const dataRef = useRef<LiveDataResult | null>(null);
   dataRef.current = data;
 
-  // Step 1: Load ThingSpeak immediately so dashboard is never blank
+  // Sync inputs if props update (from dashboard directly)
+  useEffect(() => {
+    if (customSource) setSource(customSource);
+  }, [customSource]);
+  useEffect(() => {
+    if (customWaqiToken !== undefined) setWaqiToken(customWaqiToken);
+  }, [customWaqiToken]);
+  useEffect(() => {
+    if (customThingspeakChannel !== undefined) setThingspeakChannel(customThingspeakChannel);
+  }, [customThingspeakChannel]);
+  useEffect(() => {
+    if (customThingspeakKey !== undefined) setThingspeakKey(customThingspeakKey);
+  }, [customThingspeakKey]);
+
+  // Sync with localStorage for cross-page navigation & sidebar updates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setSource(customSource || localStorage.getItem("aeronyx_data_source") || "real_api");
+      setWaqiToken(customWaqiToken || localStorage.getItem("aeronyx_waqi_token") || "2762cbe0240a9a00d82cc8e635b8fb10c02cee70");
+      setThingspeakChannel(customThingspeakChannel || localStorage.getItem("aeronyx_thingspeak_channel") || "3418865");
+      setThingspeakKey(customThingspeakKey || localStorage.getItem("aeronyx_thingspeak_key") || "HZMI1LP3UUHK2S7O");
+    };
+
+    handleStorageChange(); // Load immediately on client mount to prevent mismatches
+    window.addEventListener("storage", handleStorageChange);
+    const interval = setInterval(handleStorageChange, 2000);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [customSource, customWaqiToken, customThingspeakChannel, customThingspeakKey]);
+
+  // Step 1: Load active source immediately so dashboard is never blank
   useEffect(() => {
     setLoadingStep("connecting");
-    fetchThingSpeakLive()
-      .then((ts) => {
-        if (ts) {
-          setData((prev) => (prev ? prev : { ...ts, _source: "thingspeak" }));
+    getLiveData(source, waqiToken, thingspeakChannel, thingspeakKey)
+      .then((res) => {
+        if (res) {
+          setData((prev) => (prev && prev._source === res._source ? prev : res));
           try {
-            sessionStorage.setItem("aeronyx_last_reading", JSON.stringify({ ...ts, _source: "thingspeak" }));
+            sessionStorage.setItem("aeronyx_last_reading", JSON.stringify(res));
           } catch {}
         }
       })
@@ -52,7 +96,7 @@ export function useLiveData() {
         setLoading(false);
         setLoadingStep("done");
       });
-  }, []);
+  }, [source, waqiToken, thingspeakChannel, thingspeakKey]);
 
   // Step 2: Wake backend and upgrade data once it's ready
   useEffect(() => {
@@ -67,8 +111,8 @@ export function useLiveData() {
       if (alive) {
         setBackendStatus("online");
         try {
-          const result = await getLiveData();
-          if (!cancelled && result && result._source === "backend") {
+          const result = await getLiveData(source, waqiToken, thingspeakChannel, thingspeakKey);
+          if (!cancelled && result && (result._source === "backend" || result._source === "waqi-api" || result._source === "thingspeak")) {
             setData(result);
             try {
               sessionStorage.setItem("aeronyx_last_reading", JSON.stringify(result));
@@ -87,8 +131,8 @@ export function useLiveData() {
         if (up && !cancelled) {
           setBackendStatus("online");
           try {
-            const result = await getLiveData();
-            if (!cancelled && result && result._source === "backend") {
+            const result = await getLiveData(source, waqiToken, thingspeakChannel, thingspeakKey);
+            if (!cancelled && result && (result._source === "backend" || result._source === "waqi-api" || result._source === "thingspeak")) {
               setData(result);
               try {
                 sessionStorage.setItem("aeronyx_last_reading", JSON.stringify(result));
@@ -109,12 +153,13 @@ export function useLiveData() {
       cancelled = true;
       clearTimeout(wakeTimer);
     };
-  }, []);
+  }, [source, waqiToken, thingspeakChannel, thingspeakKey]);
 
   const fetchData = useCallback(async () => {
     try {
+      setLoading(true);
       setLoadingStep("fetching");
-      const result = await getLiveData();
+      const result = await getLiveData(source, waqiToken, thingspeakChannel, thingspeakKey);
       if (result) {
         setData(result);
         if (result._source === "backend") setBackendStatus("online");
@@ -128,7 +173,7 @@ export function useLiveData() {
       setLoading(false);
       setLoadingStep("done");
     }
-  }, []);
+  }, [source, waqiToken, thingspeakChannel, thingspeakKey]);
 
   useEffect(() => {
     // Polling every 30s as a fallback for standard websocket

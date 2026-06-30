@@ -26,7 +26,8 @@ import {
   Droplets,
   Atom,
   Wind,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -161,7 +162,21 @@ function LoadingScreen({ step }: { step: string }) {
 }
 
 export default function Dashboard() {
-  const { data, loading, loadingStep, backendStatus, refetch } = useLiveData();
+  const [source, setSource] = useState<string>("real_api");
+  const [waqiToken, setWaqiToken] = useState<string>("2762cbe0240a9a00d82cc8e635b8fb10c02cee70");
+  const [thingspeakChannel, setThingspeakChannel] = useState<string>("3418865");
+  const [thingspeakKey, setThingspeakKey] = useState<string>("HZMI1LP3UUHK2S7O");
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Load from localStorage only after mounting to prevent SSR hydration mismatches
+  useEffect(() => {
+    setSource(localStorage.getItem("aeronyx_data_source") || "real_api");
+    setWaqiToken(localStorage.getItem("aeronyx_waqi_token") || "2762cbe0240a9a00d82cc8e635b8fb10c02cee70");
+    setThingspeakChannel(localStorage.getItem("aeronyx_thingspeak_channel") || "3418865");
+    setThingspeakKey(localStorage.getItem("aeronyx_thingspeak_key") || "HZMI1LP3UUHK2S7O");
+  }, []);
+
+  const { data, loading, loadingStep, backendStatus, refetch } = useLiveData(source, waqiToken, thingspeakChannel, thingspeakKey);
   const { data: history } = useHistoryData(300);
   const timeAgo = useTimeAgo(data?.timestamp || "");
   const [mlSource, setMlSource] = useState<any>(null);
@@ -334,10 +349,178 @@ export default function Dashboard() {
             <h2 style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.03em" }}>Telemetry Dashboard</h2>
             <p style={{ color: "var(--earth-500)", fontSize: "0.9rem", marginTop: 4 }}>Real-time atmospheric diagnostics & localized predictive insights</p>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {/* Segmented Control Toggle */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              background: "rgba(0,30,43,0.04)",
+              border: "1px solid var(--hairline-soft)",
+              padding: "3px",
+              borderRadius: "var(--radius-sm)",
+              gap: "2px"
+            }}>
+              <button
+                onClick={() => {
+                  localStorage.setItem("aeronyx_data_source", "real_api");
+                  setSource("real_api");
+                }}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "calc(var(--radius-sm) - 2px)",
+                  border: "none",
+                  background: source === "real_api" ? "#ffffff" : "transparent",
+                  color: source === "real_api" ? "var(--brand-teal-deep)" : "var(--earth-500)",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: source === "real_api" ? "var(--shadow-sm)" : "none",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                Real AQI API
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.setItem("aeronyx_data_source", "hardware");
+                  setSource("hardware");
+                }}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "calc(var(--radius-sm) - 2px)",
+                  border: "none",
+                  background: source === "hardware" ? "#ffffff" : "transparent",
+                  color: source === "hardware" ? "var(--brand-teal-deep)" : "var(--earth-500)",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: source === "hardware" ? "var(--shadow-sm)" : "none",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                IoT Hardware
+              </button>
+            </div>
+
+            {/* Gear Icon Settings Toggle Button */}
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "8px",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid rgba(0,30,43,0.08)",
+                background: showSettings ? "rgba(0,30,43,0.05)" : "#ffffff",
+                color: showSettings ? "var(--brand-teal-deep)" : "var(--earth-500)",
+                cursor: "pointer",
+                boxShadow: "var(--shadow-sm)",
+                transition: "all 0.15s ease",
+              }}
+              title="Configure Keys"
+            >
+              <Settings size={14} />
+            </button>
+
+            {/* Collapsible settings panel */}
+            <AnimatePresence>
+              {showSettings && (
+                <motion.div
+                  initial={{ opacity: 0, width: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, width: "auto", scale: 1 }}
+                  exit={{ opacity: 0, width: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden" }}
+                >
+                  {source === "real_api" ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <input
+                        type="password"
+                        placeholder="WAQI Token"
+                        value={waqiToken}
+                        onChange={(e) => {
+                          const token = e.target.value;
+                          setWaqiToken(token);
+                          localStorage.setItem("aeronyx_waqi_token", token);
+                        }}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: "var(--radius-sm)",
+                          border: "1px solid rgba(0,30,43,0.08)",
+                          fontSize: "0.78rem",
+                          width: "160px",
+                          outline: "none",
+                          background: "#ffffff",
+                          color: "var(--earth-800)",
+                        }}
+                      />
+                      <a
+                        href="https://aqicn.org/data-platform/token/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "var(--primary-deep)",
+                          textDecoration: "underline",
+                          fontWeight: 600,
+                          whiteSpace: "nowrap"
+                        }}
+                      >
+                        Get Key
+                      </a>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <input
+                        type="text"
+                        placeholder="Channel ID"
+                        value={thingspeakChannel}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setThingspeakChannel(val);
+                          localStorage.setItem("aeronyx_thingspeak_channel", val);
+                        }}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: "var(--radius-sm)",
+                          border: "1px solid rgba(0,30,43,0.08)",
+                          fontSize: "0.78rem",
+                          width: "100px",
+                          outline: "none",
+                          background: "#ffffff",
+                          color: "var(--earth-800)",
+                        }}
+                      />
+                      <input
+                        type="password"
+                        placeholder="Read Key"
+                        value={thingspeakKey}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setThingspeakKey(val);
+                          localStorage.setItem("aeronyx_thingspeak_key", val);
+                        }}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: "var(--radius-sm)",
+                          border: "1px solid rgba(0,30,43,0.08)",
+                          fontSize: "0.78rem",
+                          width: "110px",
+                          outline: "none",
+                          background: "#ffffff",
+                          color: "var(--earth-800)",
+                        }}
+                      />
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {data && (
-              <div className="last-updated" style={{ margin: 0, background: "rgba(0,30,43,0.02)", border: "1px solid var(--hairline-soft)", padding: "6px 12px", borderRadius: "var(--radius-sm)" }}>
-                <span className="dot" style={{ background: aqiMeta.color }} />
+              <div className="last-updated" style={{ margin: 0, background: "rgba(0,30,43,0.02)", border: "1px solid var(--hairline-soft)", padding: "6px 12px", borderRadius: "var(--radius-sm)", display: "flex", alignItems: "center", gap: 6 }}>
+                <span className="dot" style={{ background: aqiMeta.color, width: 6, height: 6, display: "inline-block", borderRadius: "50%" }} />
                 <Clock size={12} style={{ color: "var(--earth-400)" }} />
                 <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--earth-600)" }}>Updated {timeAgo}</span>
               </div>
@@ -368,7 +551,13 @@ export default function Dashboard() {
                 e.currentTarget.style.borderColor = "rgba(0,30,43,0.08)";
               }}
             >
-              <RefreshCw size={13} />
+              <motion.div
+                animate={loading ? { rotate: 360 } : { rotate: 0 }}
+                transition={loading ? { repeat: Infinity, duration: 1.2, ease: "linear" } : { duration: 0.2 }}
+                style={{ display: "inline-flex" }}
+              >
+                <RefreshCw size={13} />
+              </motion.div>
               <span>Refresh Readings</span>
             </button>
           </div>
@@ -463,8 +652,8 @@ export default function Dashboard() {
               <span>Ward 01 Node</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.78rem", color: "var(--earth-500)", fontWeight: 500 }}>
-              <Wifi size={12} style={{ color: "var(--primary-deep)" }} />
-              <span>ThingSpeak Live</span>
+              <Wifi size={12} style={{ color: source === "hardware" ? "var(--primary-deep)" : "#10b981" }} />
+              <span>{source === "hardware" ? "ThingSpeak Hardware" : "WAQI Real API"}</span>
             </div>
           </div>
         </motion.div>
@@ -508,7 +697,10 @@ export default function Dashboard() {
                   <div style={{ marginTop: 24 }}>
                     <div className="metric-value" style={{ fontSize: "1.7rem", fontWeight: 600, color: "var(--brand-teal-deep)", letterSpacing: "-0.03em" }}>
                       {typeof value === "number" ? (
-                        value >= 100 ? Math.round(value) : value.toFixed(1)
+                        key === "no2" ? value.toFixed(3) :
+                        key === "co" || key === "tvoc" ? value.toFixed(2) :
+                        key === "humidity" || value >= 100 ? Math.round(value) :
+                        value.toFixed(1)
                       ) : "—"}
                       <span className="metric-unit" style={{ fontSize: "0.75rem", color: "var(--earth-400)", marginLeft: "3px" }}>{unit}</span>
                     </div>

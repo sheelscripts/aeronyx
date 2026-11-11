@@ -272,6 +272,7 @@ export default function WardMap({
   );
 
   const center: [number, number] = [28.65, 77.15];
+  const cartoApiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
 
   return (
     <div className="ward-map-wrapper">
@@ -284,8 +285,17 @@ export default function WardMap({
         style={{ height: "100%", width: "100%", borderRadius: "var(--radius-lg)", minHeight: "inherit" }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org">OSM</a> &copy; <a href="https://carto.com">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution={
+            cartoApiKey
+              ? '&copy; <a href="https://www.openstreetmap.org">OSM</a> &copy; <a href="https://carto.com">CARTO</a>'
+              : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          }
+          url={
+            cartoApiKey
+              ? `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?api_key=${cartoApiKey}`
+              : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          }
+          opacity={cartoApiKey ? 1 : 0.75}
         />
 
         {/* Zone layer — outlines or fill */}
